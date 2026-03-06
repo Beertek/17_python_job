@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Добро пожаловать в HH.ru Парсер</h1>
+    <p>Сервис для поиска и анализа вакансий с сайта HeadHunter</p>
+    <a href="/search" class="btn btn-primary">Начать поиск</a>
+</div>
+
+<div class="features">
+    <div class="feature">
+        <h3>🔍 Поиск вакансий</h3>
+        <p>Ищите вакансии по ключевым словам и регионам</p>
+    </div>
+    <div class="feature">
+        <h3>📊 Анализ данных</h3>
+        <p>Получайте структурированную информацию о вакансиях</p>
+    </div>
+    <div class="feature">
+        <h3>📱 Контакты</h3>
+        <p>Находите контактные данные работодателей</p>
+    </div>
+</div>
+{% endblock %}

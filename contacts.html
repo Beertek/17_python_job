@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Контакты{% endblock %}
+
+{% block content %}
+<h1>Контакты</h1>
+
+<div class="contacts-info">
+    <div class="contact-card">
+        <h3>Разработчик</h3>
+        <p><strong>Email:</strong> developer@example.com</p>
+        <p><strong>Telegram:</strong> @hhparser_bot</p>
+        <p><strong>GitHub:</strong> github.com/hhparser</p>
+    </div>
+
+    <div class="contact-card">
+        <h3>Поддержка</h3>
+        <p><strong>Email:</strong> support@hhparser.ru</p>
+        <p><strong>Время работы:</strong> 24/7</p>
+        <p><strong>Ответ в течение:</strong> 1 часа</p>
+    </div>
+
+    <div class="contact-card">
+        <h3>О проекте</h3>
+        <p>Версия: 1.0.0</p>
+        <p>Дата релиза: 2024</p>
+        <p>Технологии: Flask, HH.ru API</p>
+    </div>
+</div>
+{% endblock %}

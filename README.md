@@ -1,1 +1,1 @@
-#### 17_python_job Основы реляционных баз данных. Sqlite, PostgreSql
+#### 16_python_job Веб-сайт на Flask. MVC

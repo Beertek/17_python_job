@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск вакансий{% endblock %}
+
+{% block content %}
+<h1>Поиск вакансий</h1>
+
+<div class="search-container">
+    <form id="searchForm" method="POST" action="/search" class="search-form">
+        <div class="form-group">
+            <label for="query">Поисковый запрос:</label>
+            <input type="text" id="query" name="query" value="{{ last_query }}" required 
+                   placeholder="Например: python разработчик">
+        </div>
+
+        <div class="form-group">
+            <label for="region">Регион:</label>
+            <input type="text" id="region" name="region" value="{{ last_region }}" 
+                   placeholder="Например: Москва (оставьте пустым для всей России)">
+        </div>
+
+        <div class="form-group">
+            <label for="pages">Количество страниц:</label>
+            <input type="number" id="pages" name="pages" value="{{ last_pages }}" min="1" max="10" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="searchBtn">Найти вакансии</button>
+    </form>
+
+    {% if search_started %}
+    <div id="progress" class="progress-container">
+        <h3>Поиск вакансий...</h3>
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+        </div>
+        <p id="progressMessage">Инициализация...</p>
+        
+        <div id="timeoutDialog" class="timeout-dialog" style="display: none;">
+            <p id="timeoutMessage"></p>
+            <button onclick="continueSearch(true)" class="btn btn-success">Продолжить</button>
+            <button onclick="continueSearch(false)" class="btn btn-danger">Прекратить</button>
+        </div>
+    </div>
+
+    <div id="results" class="results-container" style="display: none;">
+        <h2>Результаты поиска</h2>
+        <div id="resultsTable"></div>
+        <button onclick="downloadCSV()" class="btn btn-success">Скачать CSV</button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let searchId = "{{ search_id }}";
+let checkInterval;
+let timeoutShown = false;
+
+{% if search_started %}
+// Проверка статуса поиска
+function checkStatus() {
+    fetch(`/search_status/${searchId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed') {
+                clearInterval(checkInterval);
+                document.getElementById('progress').style.display = 'none';
+                loadResults();
+            } else if (data.status === 'error') {
+                clearInterval(checkInterval);
+                document.getElementById('progressMessage').textContent = 'Ошибка: ' + data.message;
+            } else if (data.status === 'in_progress') {
+                document.getElementById('progressMessage').textContent = data.message || 'Поиск...';
+            }
+        });
+}
+
+// Проверка таймаута
+function checkTimeout() {
+    fetch('/check_timeout', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({search_id: searchId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.timeout && !timeoutShown) {
+            timeoutShown = true;
+            document.getElementById('timeoutDialog').style.display = 'block';
+            document.getElementById('timeoutMessage').textContent = data.message;
+        }
+    });
+}
+
+// Продолжить/прекратить поиск
+function continueSearch(continue_search) {
+    document.getElementById('timeoutDialog').style.display = 'none';
+    
+    fetch('/continue_search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            search_id: searchId,
+            continue: continue_search
+        })
+    });
+    
+    if (!continue_search) {
+        clearInterval(checkInterval);
+        document.getElementById('progress').style.display = 'none';
+    }
+}
+
+// Загрузка результатов
+function loadResults() {
+    fetch(`/search_results/${searchId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                displayResults(data.results);
+                document.getElementById('results').style.display = 'block';
+            }
+        });
+}
+
+// Отображение результатов в таблице
+function displayResults(results) {
+    const table = document.getElementById('resultsTable');
+    
+    let html = '<table class="results-table">';
+    html += '<thead><tr><th>Имя</th><th>Телефон</th><th>Специальность</th><th>Зарплата</th><th>Регион</th><th>Компания</th></tr></thead>';
+    html += '<tbody>';
+    
+    results.forEach(vacancy => {
+        html += '<tr>';
+        html += `<td>${vacancy.name || 'Не указано'}</td>`;
+        html += `<td>${vacancy.phone || 'Не указан'}</td>`;
+        html += `<td>${vacancy.speciality || 'Не указана'}</td>`;
+        html += `<td>${vacancy.salary || 'Не указана'}</td>`;
+        html += `<td>${vacancy.region || 'Не указан'}</td>`;
+        html += `<td>${vacancy.company || 'Не указана'}</td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    table.innerHTML = html;
+}
+
+// Скачивание CSV
+function downloadCSV() {
+    fetch(`/search_results/${searchId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let csv = 'Имя;Телефон;Специальность;Зарплата;Регион;Компания;Ссылка;Дата\n';
+                
+                data.results.forEach(v => {
+                    csv += `"${v.name}";"${v.phone}";"${v.speciality}";"${v.salary}";"${v.region}";"${v.company}";"${v.url}";"${v.date}"\n`;
+                });
+                
+                const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `vacancies_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`;
+                link.click();
+            }
+        });
+}
+
+// Запуск проверок
+checkInterval = setInterval(checkStatus, 1000);
+setInterval(checkTimeout, 5000);
+{% endif %}
+</script>
+{% endblock %}
